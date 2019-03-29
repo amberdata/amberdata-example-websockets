@@ -1,4 +1,4 @@
-# amberdata-example-websockets-mint-burn
+# amberdata-example-websockets
 
 ## Resources
 

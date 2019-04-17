@@ -10,15 +10,8 @@
 
     // Listen for the jQuery ready event on the document
     $(async function () {
+        setLoading(true)
         initWebSockets()
-        // setInterval(() => addStreamEntryFromQueue() , 50)
-        let counter = 10;
-        const myFunction = function() {
-            counter = getRandomInt(5,40);
-            addStreamEntryFromQueue()
-            setTimeout(myFunction, counter);
-        }
-        setTimeout(myFunction, counter);
     });
 
 
@@ -45,24 +38,17 @@
     let getBlockTransactions = (number) => axios.get(`${BASE_URL}/blocks/${number}/transactions`, config)
     let getBlockFunctions = (number) => axios.get(`${BASE_URL}/blocks/${number}/functions`, config)
 
-    let eventQueue = []
-    const addStreamEntryFromQueue = () => {
-        if(eventQueue.length > 0) {
-            let entry = eventQueue.pop()
-            addStreamEntry(entry)
-            launchFrom({x: getRandomInt(400, 950), y: getRandomInt(350, 550), colorText: entry.color})
-        }
-    }
-
     let initWebSockets = () => {
         // Create WebSocket connection.
         const socket = new WebSocket('wss://ws.web3api.io?x-api-key=UAK000000000000000000000000demo0001');
 
         // Connection opened
         socket.addEventListener('open', function (event) {
-            console.log('Connection opened - ', event.data);
+            console.log('Connection opened - ', event);
             socket.send(`{"jsonrpc":"2.0","id":${BLOCK},"method":"subscribe","params":["block"]}`);
             socket.send(`{"jsonrpc":"2.0","id":${UNCLE},"method":"subscribe","params":["uncle"]}`);
+            socket.send(`{"jsonrpc":"2.0","id":${TXN},"method":"subscribe","params":["transaction"]}`);
+            socket.send(`{"jsonrpc":"2.0","id":${INTERNAL_MSG},"method":"subscribe","params":["function"]}`);
         });
 
         // Listen for messages
@@ -106,32 +92,19 @@
      * Manages Websocket subscriptions.
      */
     const responseHandler = async (wsEvent) => {
-        console.log('Message received')
+
         const response = JSON.parse(wsEvent.data)
         switch (response.id) {
             case BLOCK: subscriptions[response.result] = new DataHandler(BLOCK); break;
             case UNCLE: subscriptions[response.result] = new DataHandler(UNCLE); break;
+            case TXN: subscriptions[response.result] = new DataHandler(TXN); break;
+            case INTERNAL_MSG: subscriptions[response.result] = new DataHandler(INTERNAL_MSG); break;
         }
         if (response.params) {
+            setLoading(false)
             let dataObject = subscriptions[response.params.subscription].createDataObject(response.params.result)
-            console.log('type', subscriptions[response.params.subscription].type)
-            if (subscriptions[response.params.subscription].type === BLOCK) {
-                launchFrom({x: getRandomInt(150, 650), y: getRandomInt(350, 550), colorText: 'green'})
-                let txnData = extractData(await getBlockTransactions(response.params.result.number))
-                let imData = extractData(await getBlockFunctions(response.params.result.number))
-
-                for(let i = 0; i < txnData.length; i++) {
-                    let txnDataObj = new DataHandler(TXN).createDataObject(txnData[i])
-                    eventQueue.push(txnDataObj)
-                }
-                for(let i = 0; i < imData.length; i++) {
-                    let imDataObj = new DataHandler(INTERNAL_MSG).createDataObject(imData[i])
-                    eventQueue.push(imDataObj)
-                }
-            } else if(subscriptions[response.params.subscription].type === UNCLE) {
-                launchFrom({x: getRandomInt(150, 650), y: getRandomInt(350, 550), colorText: 'orange'})
-            }
             addStreamEntry(dataObject)
+            launchFrom({x: getRandomInt(Math.ceil(window.innerWidth / 2) - 50, Math.ceil(window.innerWidth / 2) + 50), y: 500, colorText: dataObject.color})
         }
     }
 
@@ -141,7 +114,7 @@
         }
 
         createDataObject(data) {
-            return {
+            const dataObject = {
                 color: TYPE_COLOR[this.type],
                 detail: {
                     type: TYPE_LABELS[this.type],
@@ -149,6 +122,8 @@
                 },
                 link: this.getLink(data)
             }
+
+            return dataObject
         }
         getValue(data) {
             switch (this.type) {
@@ -161,10 +136,10 @@
         }
 
         getLink(data) {
-            console.log('https://amberdata.io/blocks/' + data.number)
             switch (this.type) {
                 case BLOCK: return 'https://amberdata.io/blocks/' + data.number
                 case UNCLE: return 'https://amberdata.io/uncles/' + data.number
+                case INTERNAL_MSG:
                 case TXN: return'https://amberdata.io/transactions/' + data.hash
             }
         }
@@ -175,4 +150,10 @@
 
     const getRandomInt = (min, max, _min = Math.ceil(min), _max = Math.floor(max) ) => Math.floor(Math.random() * (_max - _min)) + _min;
 
+    const setLoading = (bool) => {
+        const loader = $('.spinner')
+        loader.css('opacity', bool ? '1' : '0')
+        loader.css('visibility', bool ? 'visible' : 'hidden')
+        loader.css('display', bool ? 'block' : 'none')
+    }
 }));

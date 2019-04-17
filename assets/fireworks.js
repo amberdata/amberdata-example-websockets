@@ -10,7 +10,7 @@ let SCREEN_WIDTH = window.innerWidth,
     context = canvas.getContext('2d'),
     particles = [],
     rockets = [],
-    MAX_PARTICLES = 400,
+    MAX_PARTICLES = 1000,
     colorCode = 0;
 
 // init
@@ -23,32 +23,7 @@ $(document).ready(function() {
     setInterval(loop, 1000 / 50);
 });
 
-// TODO - remove when working
-// update mouse position
-// $(document).mousemove(function(e) {
-//     e.preventDefault();
-//     mousePos = {
-//         x: e.clientX,
-//         y: e.clientY
-//     };
-// });
 
-// TODO - remove when working
-// launch more rockets!!!
-// $(document).mousedown(function(e) {
-//     for (var i = 0; i < 5; i++) {
-//         launchFrom(Math.random() * SCREEN_WIDTH * 2 / 3 + SCREEN_WIDTH / 6);
-//     }
-// });
-
-// TODO - remove when working
-// function launch() {
-//     launchFrom(mousePos.x);
-// }
-// 360 - red
-// 220 - blue
-// 14 - orange
-// 128 - green
 const launchFrom = function ({x = 200, y = 400, colorText = 'red'} = {}) {
     let colors = {
         'firebrick': 360,
@@ -58,10 +33,10 @@ const launchFrom = function ({x = 200, y = 400, colorText = 'red'} = {}) {
     }
     let color = colors[colorText]
     let rocket = new Rocket(x, y);
-    rocket.explosionColor = color || Math.floor(Math.random() * 360 / 10) * 10;
+    rocket.explosionColor = color;
     rocket.vel.y = Math.random() * -3 - 4;
     rocket.vel.x = Math.random() * 6 - 3;
-    rocket.size = 15;
+    rocket.size = 10;
     rocket.shrink = 0.999;
     rocket.gravity = 0.01;
     rockets.push(rocket);
@@ -89,18 +64,17 @@ function loop() {
         rockets[i].render(context);
 
         // calculate distance with Pythagoras
-        let distance = Math.sqrt(Math.pow(mousePos.x - rockets[i].pos.x, 2) + Math.pow(mousePos.y - rockets[i].pos.y, 2));
+        // let distance = Math.sqrt(Math.pow(mousePos.x - rockets[i].pos.x, 2) + Math.pow(mousePos.y - rockets[i].pos.y, 2));
 
         // random chance of 1% if rockets is above the middle
-        let randomChance = rockets[i].pos.y < (SCREEN_HEIGHT * 2 / 3) ? (Math.random() * 100 <= 1) : false;
+        let randomChance = rockets[i].pos.y > (SCREEN_HEIGHT * .5) ? (Math.random() * 100 <= 50) : false;
 
         /* Explosion rules
                      - 80% of screen
                     - going down
-                    - close to the mouse
-                    - 1% chance of random explosion
+                    - 1% chance of random explosion getRandomInt(9, 15)
                 */
-        if (rockets[i].pos.y < SCREEN_HEIGHT / 5 || rockets[i].vel.y >= 0 || distance < 50 || randomChance) {
+        if (rockets[i].pos.y < SCREEN_HEIGHT / getRandomInt(5, 15) || rockets[i].vel.y >= 0) {
             rockets[i].explode();
         } else {
             existingRockets.push(rockets[i]);
@@ -226,7 +200,7 @@ Rocket.prototype.explode = function() {
         particle.vel.x = Math.cos(angle) * speed;
         particle.vel.y = Math.sin(angle) * speed;
 
-        particle.size = 10;
+        particle.size = 6;
 
         particle.gravity = 0.2;
         particle.resistance = 0.92;
@@ -265,3 +239,5 @@ Rocket.prototype.render = function(c) {
 
     c.restore();
 };
+
+const getRandomInt = (min, max, _min = Math.ceil(min), _max = Math.floor(max) ) => Math.floor(Math.random() * (_max - _min)) + _min;

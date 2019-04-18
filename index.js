@@ -20,24 +20,8 @@
     /*                     API data Retrieval                      */
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-    /* Base url for all requests */
-    const BASE_URL = 'https://web3api.io/api/v1'
-
     /* Demo key - Get your API Key at amberdata.io/pricing
     * and place yours here! */
-    let config = {
-        headers: {"x-api-key": "UAK000000000000000000000000demo0001"}
-    }
-
-    /**
-     * The following methods construct the url and sends it off to axios via the
-     * get method.
-     * @param address
-     * @param number
-     */
-    let getBlockTransactions = (number) => axios.get(`${BASE_URL}/blocks/${number}/transactions`, config)
-    let getBlockFunctions = (number) => axios.get(`${BASE_URL}/blocks/${number}/functions`, config)
-
     let initWebSockets = () => {
         // Create WebSocket connection.
         const socket = new WebSocket('wss://ws.web3api.io?x-api-key=UAK000000000000000000000000demo0001');
@@ -56,7 +40,7 @@
 
         // Listen for messages
         socket.addEventListener('close', function (event) {
-            console.log('Connection closed - ', event.data);
+            console.log('Connection closed - ', event);
         });
     }
 
@@ -144,9 +128,6 @@
             }
         }
     }
-
-    /* Get's to the data we want. Makes things clearer.*/
-    const extractData = (data) => data.data.payload
 
     const getRandomInt = (min, max, _min = Math.ceil(min), _max = Math.floor(max) ) => Math.floor(Math.random() * (_max - _min)) + _min;
 

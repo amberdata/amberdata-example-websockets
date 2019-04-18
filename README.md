@@ -18,7 +18,7 @@ Building with Amberdata.io is as simple as a few a few lines of code:
 
 ```js
 // Create WebSocket connection.
-const socket = new WebSocket('wss://ws.web3api.io?x-api-key=UAK000000000000000000000000demo0001');
+const socket = new WebSocket('wss://ws.web3api.io?x-api-key=YOUR_API_KEY_HERE');
 
 // Connection opened
 socket.addEventListener('open', function (event) {
@@ -33,7 +33,7 @@ socket.addEventListener('open', function (event) {
 socket.addEventListener('message', responseHandler);
 ```
 
-See source [here](https://github.com/amberdata/amberdata-example-websockets).
+See source [here](https://github.com/amberdata/amberdata-example-websockets/blob/f20723472788d07e4b135bd840e32a90dd4566b5/index.js#L41-L61).
 
 ## Resources
 

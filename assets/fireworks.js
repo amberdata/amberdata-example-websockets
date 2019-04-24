@@ -10,9 +10,9 @@ let SCREEN_WIDTH = window.innerWidth,
     context = canvas.getContext('2d'),
     particles = [],
     rockets = [],
-    MAX_PARTICLES = 1000,
+    MAX_PARTICLES = 500,
     colorCode = 0;
-
+window.rockets = rockets
 // init
 $(document).ready(function() {
     document.getElementsByClassName('container')[0].appendChild(canvas);
@@ -23,8 +23,7 @@ $(document).ready(function() {
     setInterval(loop, 1000 / 50);
 });
 
-
-const launchFrom = function ({x = 200, y = 400, colorText = 'red'} = {}) {
+const launchFrom = function ({x = 200, y = 0, colorText = 'blue'} = {}) {
     let colors = {
         'firebrick': 360,
         'blue': 220,
@@ -42,6 +41,8 @@ const launchFrom = function ({x = 200, y = 400, colorText = 'red'} = {}) {
     rockets.push(rocket);
 
 }
+
+window.launchFrom = launchFrom
 
 function loop() {
     // update screen size
@@ -63,18 +64,15 @@ function loop() {
         rockets[i].update();
         rockets[i].render(context);
 
-        // calculate distance with Pythagoras
-        // let distance = Math.sqrt(Math.pow(mousePos.x - rockets[i].pos.x, 2) + Math.pow(mousePos.y - rockets[i].pos.y, 2));
-
         // random chance of 1% if rockets is above the middle
-        let randomChance = rockets[i].pos.y > (SCREEN_HEIGHT * .5) ? (Math.random() * 100 <= 50) : false;
+        let randomChance = rockets[i].pos.y < (SCREEN_HEIGHT * .5) ? (Math.random() * 100 <= 1) : false;
 
         /* Explosion rules
                      - 80% of screen
                     - going down
                     - 1% chance of random explosion getRandomInt(9, 15)
                 */
-        if (rockets[i].pos.y < SCREEN_HEIGHT / getRandomInt(5, 15) || rockets[i].vel.y >= 0) {
+        if (rockets[i].pos.y < SCREEN_HEIGHT / getRandomInt(5, 15) || rockets[i].vel.y >= 0 || randomChance) {
             rockets[i].explode();
         } else {
             existingRockets.push(rockets[i]);

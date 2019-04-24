@@ -82,7 +82,7 @@ p {
 #stream {
     background: #E3E8EE;
     border-radius: 5px;
-    height: 60vh;
+    height: 30vh;
     align-self: end;
 }
 
@@ -103,7 +103,7 @@ p {
 
 #stream #list {
     overflow: scroll;
-    max-height: 60vh;
+    max-height: 30vh;
 }
 
 #stream .entry .color {
@@ -125,6 +125,7 @@ p {
 #stream .entry .detail .value {
     font-size: 1vw;
     color: #8E9399;
+    text-overflow: ellipsis;
 }
 
 #stream .entry .view {

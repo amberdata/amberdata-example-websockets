@@ -10,8 +10,18 @@
 
     // Listen for the jQuery ready event on the document
     $(async function () {
-        setLoading(true)
+        // setLoading(true)
         initWebSockets()
+        let counter = 10;
+        const myFunction = function() {
+            counter = getRandomInt(5,600);
+            let entry = eventQueue.pop()
+            if(entry){
+                launchFrom({x: getRandomInt(0, window.innerWidth), colorText: entry.color})
+            }
+            setTimeout(myFunction, counter);
+        }
+        setTimeout(myFunction, counter);
     });
 
 
@@ -68,27 +78,59 @@
         $('#stream #list').prepend(entryHTML)
     }
 
-    const subscriptions = {
+    const eventQueue = []
 
-    }
+    const subscriptions = {}
+    const blocks = {}
 
+     let count = 0
     /**
      * Manages Websocket subscriptions.
      */
     const responseHandler = async (wsEvent) => {
 
         const response = JSON.parse(wsEvent.data)
+        
         switch (response.id) {
-            case BLOCK: subscriptions[response.result] = new DataHandler(BLOCK); break;
-            case UNCLE: subscriptions[response.result] = new DataHandler(UNCLE); break;
-            case TXN: subscriptions[response.result] = new DataHandler(TXN); break;
-            case INTERNAL_MSG: subscriptions[response.result] = new DataHandler(INTERNAL_MSG); break;
+            case BLOCK: subscriptions[response.result] = {dataHandler: new DataHandler(BLOCK)}; break;
+            case UNCLE: subscriptions[response.result] = {dataHandler: new DataHandler(UNCLE)}; break;
+            case TXN: subscriptions[response.result] = {dataHandler: new DataHandler(TXN)}; break;
+            case INTERNAL_MSG: subscriptions[response.result] = {dataHandler: new DataHandler(INTERNAL_MSG)}; break;
         }
         if (response.params) {
             setLoading(false)
-            let dataObject = subscriptions[response.params.subscription].createDataObject(response.params.result)
-            addStreamEntry(dataObject)
-            launchFrom({x: getRandomInt(Math.ceil(window.innerWidth / 2) - 50, Math.ceil(window.innerWidth / 2) + 50), y: 500, colorText: dataObject.color})
+            const subscription = subscriptions[response.params.subscription]
+            const data = response.params.result
+            const blockNumber = subscription.dataHandler.getBlockNumber(data)
+
+            if(!subscription[blockNumber]) {
+                subscription[blockNumber] = {count: 0, added: false}
+            }
+
+            let dataObject = subscription.dataHandler.createDataObject(data)
+
+            if([BLOCK, UNCLE].indexOf(subscription.dataHandler.type) < 0) {
+                if(subscription[blockNumber - 1] && !subscription[blockNumber - 1].added){
+                    dataObject.detail.value = subscription[blockNumber - 1].count + ' ' + TYPE_LABELS[subscription.dataHandler.type] + 's in block ' +  blockNumber - 1
+                    addStreamEntry(dataObject)
+                    subscription[blockNumber - 1].added = true
+                }
+
+                if(count % 5 === 0) {
+                    eventQueue.push(dataObject)
+                    // launchFrom({x: getRandomInt(0, window.innerWidth), colorText: dataObject.color})
+                    console.log("count - ", count)
+                }
+            } else {
+                launchFrom({x: getRandomInt(10, window.innerWidth - 10), colorText: dataObject.color})
+                addStreamEntry(dataObject)
+            }
+
+            subscription[blockNumber].count++
+
+            console.log(subscription[blockNumber - 1])
+
+            count++
         }
     }
 
@@ -123,9 +165,19 @@
             switch (this.type) {
                 case BLOCK: return 'https://amberdata.io/blocks/' + data.number
                 case UNCLE: return 'https://amberdata.io/uncles/' + data.number
-                case INTERNAL_MSG:
+                case INTERNAL_MSG: return'https://amberdata.io/transactions/' + data.transactionHash
                 case TXN: return'https://amberdata.io/transactions/' + data.hash
             }
+        }
+
+        getBlockNumber(data) {
+            switch (this.type) {
+                case BLOCK:
+                case UNCLE: return data.number
+                case INTERNAL_MSG:
+                case TXN: return data.blockNumber
+            }
+
         }
     }
 

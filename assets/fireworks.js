@@ -23,7 +23,7 @@ $(document).ready(function() {
     setInterval(loop, 1000 / 50);
 });
 
-const launchFrom = function ({x = 200, y = 0, colorText = 'blue'} = {}) {
+const launchFrom = function ({x = 200, y = 0, colorText = 'blue', explosionSize = 10} = {}) {
     let colors = {
         'firebrick': 360,
         'blue': 220,
@@ -31,7 +31,7 @@ const launchFrom = function ({x = 200, y = 0, colorText = 'blue'} = {}) {
         'green': 128
     }
     let color = colors[colorText]
-    let rocket = new Rocket(x, y);
+    let rocket = new Rocket(x, y, explosionSize);
     rocket.explosionColor = color;
     rocket.vel.y = Math.random() * -3 - 4;
     rocket.vel.x = Math.random() * 6 - 3;
@@ -174,12 +174,13 @@ Particle.prototype.exists = function() {
     return this.alpha >= 0.1 && this.size >= 1;
 };
 
-function Rocket(x, y = 0) {
+function Rocket(x, y = 0, explosionSize = 10) {
     Particle.apply(this, [{
         x: x,
         y: SCREEN_HEIGHT - y}]);
 
     this.explosionColor = 0;
+    this.explosionSize = explosionSize
 }
 
 Rocket.prototype = new Particle();
@@ -201,7 +202,7 @@ Rocket.prototype.explode = function() {
         particle.size = 6;
 
         particle.gravity = 0.2;
-        particle.resistance = 0.92;
+        particle.resistance = 0.92 + (this.explosionSize / 1000);
         particle.shrink = Math.random() * 0.05 + 0.93;
 
         particle.flick = true;

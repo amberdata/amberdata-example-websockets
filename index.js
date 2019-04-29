@@ -10,14 +10,28 @@
 
     // Listen for the jQuery ready event on the document
     $(async function () {
-        // setLoading(true)
+
         initWebSockets()
         let counter = 10;
         const myFunction = function() {
-            counter = getRandomInt(5,600);
+            counter = getRandomInt(5,50);
             let entry = eventQueue.pop()
-            if(entry){
-                launchFrom({x: getRandomInt(0, window.innerWidth), colorText: entry.color})
+            if (entry) {
+                // console.log('HERE')
+                if (entry.type === BLOCK) {
+                    launchFrom({x: getRandomInt(window.innerWidth  / 3, window.innerWidth  / 2), colorText: entry.color, explosionSize: 90})
+                    // counter = 1000
+                    while( (ent = eventQueue.pop()) !== undefined) {
+                        if (ent !== BLOCK) {
+                            setTimeout(launchFrom({x: getRandomInt(0, window.innerWidth), colorText: ent.color}), 1000)
+                        }
+                    }
+                    console.log('BLOCK!!!')
+                } else {
+                    eventQueue.push(entry)
+                    // launchFrom({x: getRandomInt(0, window.innerWidth), colorText: entry.color})
+                    // console.log('NOT BLOCK!!!')
+                }
             }
             setTimeout(myFunction, counter);
         }
@@ -101,34 +115,25 @@
             setLoading(false)
             const subscription = subscriptions[response.params.subscription]
             const data = response.params.result
-            const blockNumber = subscription.dataHandler.getBlockNumber(data)
-
-            if(!subscription[blockNumber]) {
-                subscription[blockNumber] = {count: 0, added: false}
-            }
 
             let dataObject = subscription.dataHandler.createDataObject(data)
 
             if([BLOCK, UNCLE].indexOf(subscription.dataHandler.type) < 0) {
-                if(subscription[blockNumber - 1] && !subscription[blockNumber - 1].added){
-                    dataObject.detail.value = subscription[blockNumber - 1].count + ' ' + TYPE_LABELS[subscription.dataHandler.type] + 's in block ' +  blockNumber - 1
-                    addStreamEntry(dataObject)
-                    subscription[blockNumber - 1].added = true
-                }
 
-                if(count % 5 === 0) {
+                // addStreamEntry(dataObject)
+
+                if(count % 20 === 0) {
                     eventQueue.push(dataObject)
-                    // launchFrom({x: getRandomInt(0, window.innerWidth), colorText: dataObject.color})
-                    console.log("count - ", count)
+
                 }
             } else {
-                launchFrom({x: getRandomInt(10, window.innerWidth - 10), colorText: dataObject.color})
+                eventQueue.push(dataObject)
+                // launchFrom({x: getRandomInt(60, window.innerWidth - 60), colorText: dataObject.color})
+                // await setTimeout(function(){}, 3000);
                 addStreamEntry(dataObject)
             }
 
-            subscription[blockNumber].count++
-
-            console.log(subscription[blockNumber - 1])
+            // console.log(dataObject)
 
             count++
         }
@@ -140,7 +145,8 @@
         }
 
         createDataObject(data) {
-            const dataObject = {
+            return {
+                type: this.type,
                 color: TYPE_COLOR[this.type],
                 detail: {
                     type: TYPE_LABELS[this.type],
@@ -148,8 +154,6 @@
                 },
                 link: this.getLink(data)
             }
-
-            return dataObject
         }
         getValue(data) {
             switch (this.type) {

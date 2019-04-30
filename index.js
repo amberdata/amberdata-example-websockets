@@ -17,21 +17,7 @@
             counter = getRandomInt(5,50);
             let entry = eventQueue.pop()
             if (entry) {
-                // console.log('HERE')
-                if (entry.type === BLOCK) {
-                    launchFrom({x: getRandomInt(window.innerWidth  / 3, window.innerWidth  / 2), colorText: entry.color, explosionSize: 90})
-                    // counter = 1000
-                    while( (ent = eventQueue.pop()) !== undefined) {
-                        if (ent !== BLOCK) {
-                            setTimeout(launchFrom({x: getRandomInt(0, window.innerWidth), colorText: ent.color}), 1000)
-                        }
-                    }
-                    console.log('BLOCK!!!')
-                } else {
-                    eventQueue.push(entry)
-                    // launchFrom({x: getRandomInt(0, window.innerWidth), colorText: entry.color})
-                    // console.log('NOT BLOCK!!!')
-                }
+                launchFrom({x: getRandomInt(window.innerWidth  / 3, window.innerWidth  / 2), colorText: entry.color, explosionSize: 20})
             }
             setTimeout(myFunction, counter);
         }
@@ -120,16 +106,17 @@
 
             if([BLOCK, UNCLE].indexOf(subscription.dataHandler.type) < 0) {
 
-                // addStreamEntry(dataObject)
+                addStreamEntry(dataObject)
 
                 if(count % 20 === 0) {
                     eventQueue.push(dataObject)
-
+                    // launchFrom({x: getRandomInt(0, window.innerWidth), colorText: dataObject.color})
                 }
             } else {
-                eventQueue.push(dataObject)
+                // eventQueue.push(dataObject)
                 // launchFrom({x: getRandomInt(60, window.innerWidth - 60), colorText: dataObject.color})
                 // await setTimeout(function(){}, 3000);
+                launchFrom({x: getRandomInt(window.innerWidth  / 3, window.innerWidth  / 2), colorText: dataObject.color, explosionSize: 90})
                 addStreamEntry(dataObject)
             }
 

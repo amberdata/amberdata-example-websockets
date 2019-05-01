@@ -56,26 +56,38 @@
 
     const BLOCK = 0, UNCLE = 1, TXN = 2, INTERNAL_MSG = 3
     const TYPE_COLOR = ['green', 'orange', 'firebrick', 'blue']
-    const TYPE_LABELS = ['Block', 'Uncle', 'Transaction', 'Internal Message']
+    const TYPE_NAMES = ['Block', 'Uncle', 'Transaction', 'Internal Message']
+    const TYPE_LABELS = ['Bk', 'Un', 'Tx', 'IM']
     const getEntryBg = () => $('#stream #list').children().length % 2 ? '#F9F9F9' : 'white'
-    const renderEntry = (entry) => `
-            <div style="background: ${getEntryBg()}" class="entry">
-                <div style="background: ${entry.color}" class="color"></div>
-                <div class="detail">
-                    <div class="type">
-                        ${entry.detail.type}
-                    </div>
-                    <div class="value">
-                        ${entry.detail.value}
-                    </div>
+    const renderBlockEntry = (entry) => `
+            <div id="block-${entry.raw.number}" class="entry">
+                <div class="entry-block">
+                  <div style="background: ${entry.color}" class="color"><span>${entry.detail.type}</span></div>
+                  <div class="detail">
+                      <div class="type">${entry.detail.value}</div>
+                      <div class="value">${entry.detail.name}</div>
+                  </div>
+                  <a href="${entry.link}" target="_blank" class="view">View ></a>
                 </div>
-                <a href="${entry.link}" target="_blank" class="view">View ></a>
+                <div class="entry-details"></div>
             </div>`
+    const renderTxEntry = (entry) => `<a href="${entry.link}" style="background: ${entry.color}" target="_blank" class="tx-item">${entry.detail.type}</a>`
 
-    const addStreamEntry = (entry) => {
-        const entryString = renderEntry(entry)
+    // NOTE: Would be better to push in batches, especially when tons of events fire
+    const parent = $('#stream #list')
+    const hasParentBlock = id => $(`#stream #list #block-${id}`)
+    const getParentBlock = id => $(`#stream #list #block-${id} .entry-details`)
+    const addStreamEntry = (entryString) => {
         const entryHTML = $.parseHTML(entryString)
-        $('#stream #list').prepend(entryHTML)
+        parent.prepend(entryHTML)
+    }
+    const addStreamEntryAtId = (entry) => {
+        // Get id of block, then check if it exists yet, append if ready
+        const blockNum = entry.raw.blockNumber
+        if (!hasParentBlock(blockNum)) return
+        const parentBlock = getParentBlock(blockNum)
+        const entryHTML = $.parseHTML(renderTxEntry(entry))
+        parentBlock.append(entryHTML)
     }
 
     const eventQueue = []
@@ -90,7 +102,7 @@
     const responseHandler = async (wsEvent) => {
 
         const response = JSON.parse(wsEvent.data)
-        
+
         switch (response.id) {
             case BLOCK: subscriptions[response.result] = {dataHandler: new DataHandler(BLOCK)}; break;
             case UNCLE: subscriptions[response.result] = {dataHandler: new DataHandler(UNCLE)}; break;
@@ -105,8 +117,7 @@
             let dataObject = subscription.dataHandler.createDataObject(data)
 
             if([BLOCK, UNCLE].indexOf(subscription.dataHandler.type) < 0) {
-
-                addStreamEntry(dataObject)
+                addStreamEntryAtId(dataObject)
 
                 if(count % 20 === 0) {
                     eventQueue.push(dataObject)
@@ -117,10 +128,8 @@
                 // launchFrom({x: getRandomInt(60, window.innerWidth - 60), colorText: dataObject.color})
                 // await setTimeout(function(){}, 3000);
                 launchFrom({x: getRandomInt(window.innerWidth  / 3, window.innerWidth  / 2), colorText: dataObject.color, explosionSize: 90})
-                addStreamEntry(dataObject)
+                addStreamEntry(renderBlockEntry(dataObject))
             }
-
-            // console.log(dataObject)
 
             count++
         }
@@ -137,9 +146,11 @@
                 color: TYPE_COLOR[this.type],
                 detail: {
                     type: TYPE_LABELS[this.type],
+                    name: TYPE_NAMES[this.type],
                     value: this.getValue(data)
                 },
-                link: this.getLink(data)
+                link: this.getLink(data),
+                raw: data
             }
         }
         getValue(data) {
@@ -147,7 +158,8 @@
                 case BLOCK:
                 case UNCLE: return parseInt(data.number).toLocaleString('en')
                 case TXN: return data.hash
-                case INTERNAL_MSG: return data.transactionHash
+                case INTERNAL_MSG: return data.hash
+                // case INTERNAL_MSG: return data.transactionHash
                 // case..., etc.
             }
         }

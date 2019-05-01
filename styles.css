@@ -88,7 +88,7 @@ p {
 #stream {
     background: #E3E8EE;
     border-radius: 5px;
-    height: 30vh;
+    height: 50vh;
     align-self: end;
 }
 
@@ -98,8 +98,8 @@ p {
 }
 
 #stream .entry {
-    display: grid;
-    grid-template-columns: 10% auto auto;
+    display: flex;
+    flex-direction: column;
     padding: 5px 15px;
     font-size: 2vw;
     box-sizing: border-box;
@@ -107,9 +107,47 @@ p {
     align-items: center;
 }
 
+#stream .entry:nth-child(odd) {
+    background: #f9f9f9;
+}
+
+#stream .entry .entry-block {
+    display: grid;
+    grid-template-columns: 50px auto auto;
+    width: 100%;
+}
+
+.entry-block .color {
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.entry-details {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    margin: 10px 0 5px;
+}
+
+#stream .tx-item {
+  color: white;
+  line-height: 6pt;
+  font-size: 6pt;
+  padding: 4px 0px 0px;
+  border-radius: 3px;
+  display: block;
+  width: 16px;
+  height: 12px;
+  text-align: center;
+  vertical-align: bottom;
+  margin: 0px 2px 2px 0px;
+}
+
 #stream #list {
     overflow: scroll;
-    max-height: 30vh;
+    max-height: 50vh;
 }
 
 #stream .entry .color {
@@ -135,8 +173,12 @@ p {
 }
 
 #stream .entry .view {
-    font-size: 1.5vw;
+    font-size: 10pt;
+    font-weight: 700;
+    text-transform: uppercase;
     justify-self: right;
+    align-self: center;
+    padding: 10px;
 }
 
 #firework-canvas {

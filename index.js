@@ -86,10 +86,11 @@
 
     const addBlockEntry = entry => {
         const previousBlock = getPreviousBlockEl(entry.raw.number)
+        const newBlock = new DataHandler(BLOCK).createDataObject(entry.raw.number)
         if (!previousBlock) {
-            addStreamEntry(renderBlockEntry(new DataHandler(BLOCK).createDataObject(entry.raw.number)))
+            addStreamEntry(renderBlockEntry(newBlock))
         }
-        $(previousBlock).before(renderBlockEntry(new DataHandler(BLOCK).createDataObject(entry.raw.number)));
+        $(previousBlock).before(renderBlockEntry(newBlock));
     }
 
     const addStreamEntry = (entryString) => {
@@ -136,9 +137,7 @@
 
             let dataObject = subscription.dataHandler.createDataObject(data)
             
-            if (!dataObject.raw.blockNumber) {
 
-            }
 
             if([BLOCK, UNCLE].indexOf(subscription.dataHandler.type) < 0) {
                 if (dataObject.raw.blockNumber <  getFirstLoadedBlock()) return
@@ -148,9 +147,17 @@
                 }
             } else {
                 launchFrom({x: getRandomInt(window.innerWidth  / 3, window.innerWidth  / 2), colorText: dataObject.color, explosionSize: 110})
-                currentBlockNum = dataObject.raw.number
-                if (hasParentBlock(dataObject.raw.number)) return
-                addBlockEntry(dataObject)
+
+                if (subscription.dataHandler.type === BLOCK) {
+                    currentBlockNum = dataObject.raw.number
+                    if(!hasParentBlock(dataObject.raw.number)) {
+                        addBlockEntry(dataObject)
+                    }
+                } else if (subscription.dataHandler.type === UNCLE) {
+                    addStreamEntry(renderBlockEntry(dataObject))
+                }
+
+
             }
             count++
         }

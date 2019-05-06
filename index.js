@@ -137,8 +137,7 @@
             let dataObject = subscription.dataHandler.createDataObject(data)
             
             if (!dataObject.raw.blockNumber) {
-                console.log('--- --- ----- ---- - Bad block ?????')
-                console.log(dataObject)
+
             }
 
             if([BLOCK, UNCLE].indexOf(subscription.dataHandler.type) < 0) {

@@ -202,7 +202,7 @@ Rocket.prototype.explode = function() {
         particle.size = 6;
 
         particle.gravity = 0.2;
-        particle.resistance = 0.92 + (this.explosionSize / 1000);
+        particle.resistance = 0.85 + (this.explosionSize / 1000);
         particle.shrink = Math.random() * 0.05 + 0.93;
 
         particle.flick = true;

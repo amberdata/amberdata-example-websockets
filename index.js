@@ -17,7 +17,7 @@
             counter = getRandomInt(5,50);
             let entry = eventQueue.pop()
             if (entry) {
-                launchFrom({x: getRandomInt(window.innerWidth  / 3, window.innerWidth  / 2), colorText: entry.color, explosionSize: 20})
+                launchFrom({x: getRandomInt(window.innerWidth  / 3, window.innerWidth  / 2), colorText: entry.color, explosionSize: 2})
             }
             setTimeout(myFunction, counter);
         }
@@ -39,10 +39,7 @@
         // Connection opened
         socket.addEventListener('open', function (event) {
             console.log('Connection opened - ', event);
-            socket.send(`{"jsonrpc":"2.0","id":${BLOCK},"method":"subscribe","params":["block"]}`);
-            socket.send(`{"jsonrpc":"2.0","id":${UNCLE},"method":"subscribe","params":["uncle"]}`);
-            socket.send(`{"jsonrpc":"2.0","id":${TXN},"method":"subscribe","params":["transaction"]}`);
-            socket.send(`{"jsonrpc":"2.0","id":${INTERNAL_MSG},"method":"subscribe","params":["function"]}`);
+            connect(socket)
         });
 
         // Listen for messages
@@ -51,14 +48,21 @@
         // Listen for messages
         socket.addEventListener('close', function (event) {
             console.log('Connection closed - ', event);
+            initWebSockets()
         });
+    }
+
+    const connect = socket => {
+        socket.send(`{"jsonrpc":"2.0","id":${BLOCK},"method":"subscribe","params":["block"]}`);
+        socket.send(`{"jsonrpc":"2.0","id":${UNCLE},"method":"subscribe","params":["uncle"]}`);
+        socket.send(`{"jsonrpc":"2.0","id":${TXN},"method":"subscribe","params":["transaction"]}`);
+        socket.send(`{"jsonrpc":"2.0","id":${INTERNAL_MSG},"method":"subscribe","params":["function"]}`);
     }
 
     const BLOCK = 0, UNCLE = 1, TXN = 2, INTERNAL_MSG = 3
     const TYPE_COLOR = ['green', 'orange', 'firebrick', 'blue']
     const TYPE_NAMES = ['Block', 'Uncle', 'Transaction', 'Internal Message']
     const TYPE_LABELS = ['Bk', 'Un', 'Tx', 'IM']
-    const getEntryBg = () => $('#stream #list').children().length % 2 ? '#F9F9F9' : 'white'
     const renderBlockEntry = (entry) => `
             <div id="block-${entry.raw.number}" class="entry">
                 <div class="entry-block">
@@ -75,8 +79,19 @@
 
     // NOTE: Would be better to push in batches, especially when tons of events fire
     const parent = $('#stream #list')
-    const hasParentBlock = id => $(`#stream #list #block-${id}`)
+    const hasParentBlock = id => document.getElementById(`block-${id}`)
     const getParentBlock = id => $(`#stream #list #block-${id} .entry-details`)
+    const getPreviousBlockEl = number => $(`#block-${number - 1}`)
+    const getFirstLoadedBlock = () => currentBlockNum - document.getElementById('list').children.length
+
+    const addBlockEntry = entry => {
+        const previousBlock = getPreviousBlockEl(entry.raw.number)
+        if (!previousBlock) {
+            addStreamEntry(renderBlockEntry(new DataHandler(BLOCK).createDataObject(entry.raw.number)))
+        }
+        $(previousBlock).before(renderBlockEntry(new DataHandler(BLOCK).createDataObject(entry.raw.number)));
+    }
+
     const addStreamEntry = (entryString) => {
         const entryHTML = $.parseHTML(entryString)
         parent.prepend(entryHTML)
@@ -84,9 +99,13 @@
     const addStreamEntryAtId = (entry) => {
         // Get id of block, then check if it exists yet, append if ready
         const blockNum = entry.raw.blockNumber
-        if (!hasParentBlock(blockNum)) return
+        if (!hasParentBlock(blockNum)) {
+            addStreamEntry(renderBlockEntry(new DataHandler(BLOCK).createDataObject({number: blockNum})))
+        }
         const parentBlock = getParentBlock(blockNum)
+
         const entryHTML = $.parseHTML(renderTxEntry(entry))
+
         parentBlock.append(entryHTML)
     }
 
@@ -94,8 +113,9 @@
 
     const subscriptions = {}
     const blocks = {}
+    let currentBlockNum;
+    let count = 0
 
-     let count = 0
     /**
      * Manages Websocket subscriptions.
      */
@@ -115,22 +135,24 @@
             const data = response.params.result
 
             let dataObject = subscription.dataHandler.createDataObject(data)
-
-            if([BLOCK, UNCLE].indexOf(subscription.dataHandler.type) < 0) {
-                addStreamEntryAtId(dataObject)
-
-                if(count % 20 === 0) {
-                    eventQueue.push(dataObject)
-                    // launchFrom({x: getRandomInt(0, window.innerWidth), colorText: dataObject.color})
-                }
-            } else {
-                // eventQueue.push(dataObject)
-                // launchFrom({x: getRandomInt(60, window.innerWidth - 60), colorText: dataObject.color})
-                // await setTimeout(function(){}, 3000);
-                launchFrom({x: getRandomInt(window.innerWidth  / 3, window.innerWidth  / 2), colorText: dataObject.color, explosionSize: 90})
-                addStreamEntry(renderBlockEntry(dataObject))
+            
+            if (!dataObject.raw.blockNumber) {
+                console.log('--- --- ----- ---- - Bad block ?????')
+                console.log(dataObject)
             }
 
+            if([BLOCK, UNCLE].indexOf(subscription.dataHandler.type) < 0) {
+                if (dataObject.raw.blockNumber <  getFirstLoadedBlock()) return
+                addStreamEntryAtId(dataObject)
+                if(count % 20 === 0) {
+                    eventQueue.push(dataObject)
+                }
+            } else {
+                launchFrom({x: getRandomInt(window.innerWidth  / 3, window.innerWidth  / 2), colorText: dataObject.color, explosionSize: 110})
+                currentBlockNum = dataObject.raw.number
+                if (hasParentBlock(dataObject.raw.number)) return
+                addBlockEntry(dataObject)
+            }
             count++
         }
     }

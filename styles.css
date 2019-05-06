@@ -47,7 +47,7 @@ p {
     display: flex;
     align-items: center;
     flex-flow: row nowrap;
-    justify-content: space-between;
+    justify-content: space-evenly;
     padding: 15px;
 }
 

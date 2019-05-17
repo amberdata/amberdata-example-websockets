@@ -86,7 +86,8 @@
 
     const addBlockEntry = entry => {
         const previousBlock = getPreviousBlockEl(entry.raw.number)
-        const newBlock = new DataHandler(BLOCK).createDataObject(entry.raw.number)
+        const newBlock = new DataHandler(BLOCK).createDataObject({number: entry.raw.number})
+        console.log('newBlock - ', newBlock)
         if (!previousBlock) {
             addStreamEntry(renderBlockEntry(newBlock))
         }
@@ -99,7 +100,7 @@
     }
     const addStreamEntryAtId = (entry) => {
         // Get id of block, then check if it exists yet, append if ready
-        const blockNum = entry.raw.blockNumber
+        const blockNum = entry.raw.blockNumber ? entry.raw.blockNumber : entry.raw.number
         if (!hasParentBlock(blockNum)) {
             addStreamEntry(renderBlockEntry(new DataHandler(BLOCK).createDataObject({number: blockNum})))
         }
@@ -136,8 +137,6 @@
             const data = response.params.result
 
             let dataObject = subscription.dataHandler.createDataObject(data)
-            
-
 
             if([BLOCK, UNCLE].indexOf(subscription.dataHandler.type) < 0) {
                 if (dataObject.raw.blockNumber <  getFirstLoadedBlock()) return
@@ -150,14 +149,14 @@
 
                 if (subscription.dataHandler.type === BLOCK) {
                     currentBlockNum = dataObject.raw.number
-                    if(!hasParentBlock(dataObject.raw.number)) {
+
+                    if(!hasParentBlock(currentBlockNum)) {
+                        console.log(dataObject)
                         addBlockEntry(dataObject)
                     }
                 } else if (subscription.dataHandler.type === UNCLE) {
                     addStreamEntry(renderBlockEntry(dataObject))
                 }
-
-
             }
             count++
         }

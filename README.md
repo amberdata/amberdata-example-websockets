@@ -1,5 +1,5 @@
 # amberdata-example-websockets
-Build your own websocket event stream for Ethereum using Amberdata.io! Example code uses [Amberdata's Websockets](https://docs.amberdata.io/reference/connection)
+Build your own websocket event stream for Ethereum using Amberdata.io! Example code uses [Amberdata's Websockets](https://docs.amberdata.io/reference#connection)
 
 Check out [the demo page](https://amberdata.github.io/amberdata-example-websockets/)!
 

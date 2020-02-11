@@ -17,20 +17,23 @@ Go to [amberdata.io](https://amberdata.io/pricing) and click "Get started"
 Building with Amberdata.io is as simple as a few a few lines of code:
 
 ```js
-// Create WebSocket connection.
-const socket = new WebSocket('wss://ws.web3api.io?x-api-key=YOUR_API_KEY_HERE');
+// Instantiate Web3Data
+const w3d = new Web3Data('UAK000000000000000000000000demo0001')
 
-// Connection opened
-socket.addEventListener('open', function (event) {
-    console.log('Connection opened - ', event);
-    socket.send(`{"jsonrpc":"2.0","id":0,"method":"subscribe","params":["block"]}`);
-    socket.send(`{"jsonrpc":"2.0","id":1,"method":"subscribe","params":["uncle"]}`);
-    socket.send(`{"jsonrpc":"2.0","id":2,"method":"subscribe","params":["transaction"]}`);
-    socket.send(`{"jsonrpc":"2.0","id":3,"method":"subscribe","params":["function"]}`);
-});
-
-// Listen for messages
-socket.addEventListener('message', responseHandler);
+// Start socket connection
+w3d.connect()
+w3d.on({eventName: 'block'}, async block => {
+    await responseHandler(new DataHandler(BLOCK).createDataObject(block))
+})
+w3d.on({eventName: 'uncle'}, async uncle => {
+    await responseHandler(new DataHandler(UNCLE).createDataObject(uncle))
+})
+w3d.on({eventName: 'transaction'}, async txn => {
+    await responseHandler(new DataHandler(TXN).createDataObject(txn))
+})
+w3d.on({eventName: 'function'}, async func => {
+    await responseHandler(new DataHandler(INTERNAL_MSG).createDataObject(func))
+})
 ```
 
 See source [here](https://github.com/amberdata/amberdata-example-websockets/blob/f20723472788d07e4b135bd840e32a90dd4566b5/index.js#L41-L61).

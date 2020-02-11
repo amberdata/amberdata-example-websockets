@@ -113,8 +113,13 @@ p {
 
 #stream .entry .entry-block {
     display: grid;
-    grid-template-columns: 50px auto auto;
+    grid-template-columns: 50px auto auto auto;
     width: 100%;
+}
+
+#stream .entry .entry-block .stats {
+    display: flex;
+    flex-flow: column;
 }
 
 .entry-block .color {

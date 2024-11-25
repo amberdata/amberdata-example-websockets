@@ -24,42 +24,38 @@
         setTimeout(myFunction, counter);
     });
 
-
-
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
     /*                     API data Retrieval                      */
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
     /* Demo key - Get your API Key at amberdata.io/pricing
     * and place yours here! */
-    let initWebSockets = () => {
-        // Create WebSocket connection.
-        const socket = new WebSocket('wss://ws.web3api.io?x-api-key=UAK000000000000000000000000demo0001');
-
-        // Connection opened
-        socket.addEventListener('open', function (event) {
-            console.log('Connection opened - ', event);
-            connect(socket)
-        });
-
-        // Listen for messages
-        socket.addEventListener('message', responseHandler);
-
-        // Listen for messages
-        socket.addEventListener('close', function (event) {
-            console.log('Connection closed - ', event);
-            initWebSockets()
-        });
-    }
-
-    const connect = socket => {
-        socket.send(`{"jsonrpc":"2.0","id":${BLOCK},"method":"subscribe","params":["block"]}`);
-        socket.send(`{"jsonrpc":"2.0","id":${UNCLE},"method":"subscribe","params":["uncle"]}`);
-        socket.send(`{"jsonrpc":"2.0","id":${TXN},"method":"subscribe","params":["transaction"]}`);
-        socket.send(`{"jsonrpc":"2.0","id":${INTERNAL_MSG},"method":"subscribe","params":["function"]}`);
-    }
 
     const BLOCK = 0, UNCLE = 1, TXN = 2, INTERNAL_MSG = 3
+    const w3d = new Web3Data('UAK000000000000000000000000demo0001')
+    const initWebSockets = () => {
+        w3d.connect()
+        w3d.on({eventName: 'block'}, async block => {
+            const txnData = await w3d.block.getTransactions(block.number, {includePrice: true, includeTokenTransfers: true})
+                .then(txns => ({ totalTransactions: txns.length, totalEthTransferred: txns.reduce( (total, txn) => total + parseFloat(txn.price.value.total), 0 ) }))
+            if(!hasParentBlock(block.number)) {
+                addBlockEntry(new DataHandler(BLOCK).createDataObject(block))
+            }
+            else {
+                $(`#block-${block.number} .stats .eth-trans`).text(`Ether Transferred - ${txnData.totalEthTransferred.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`)
+            }
+        })
+        w3d.on({eventName: 'uncle'}, async uncle => {
+            await responseHandler(new DataHandler(UNCLE).createDataObject(uncle))
+        })
+        w3d.on({eventName: 'transaction'}, async txn => {
+            await responseHandler(new DataHandler(TXN).createDataObject(txn))
+        })
+        w3d.on({eventName: 'function'}, async func => {
+            await responseHandler(new DataHandler(INTERNAL_MSG).createDataObject(func))
+        })
+    }
+
     const TYPE_COLOR = ['green', 'orange', 'firebrick', 'blue']
     const TYPE_NAMES = ['Block', 'Uncle', 'Transaction', 'Internal Message']
     const TYPE_LABELS = ['Bk', 'Un', 'Tx', 'IM']
@@ -71,13 +67,15 @@
                       <div class="type">${entry.detail.value}</div>
                       <div class="value">${entry.detail.name}</div>
                   </div>
+                  <div class="stats">
+                        <div class="eth-trans">${entry.detail.type !== UNCLE && 'Ether Transferred - '}</div>
+                  </div>
                   <a href="${entry.link}" target="_blank" class="view">View ></a>
                 </div>
                 <div class="entry-details"></div>
             </div>`
     const renderTxEntry = (entry) => `<a href="${entry.link}" style="background: ${entry.color}" target="_blank" class="tx-item">${entry.detail.type}</a>`
 
-    // NOTE: Would be better to push in batches, especially when tons of events fire
     const parent = $('#stream #list')
     const hasParentBlock = id => document.getElementById(`block-${id}`)
     const getParentBlock = id => $(`#stream #list #block-${id} .entry-details`)
@@ -85,9 +83,10 @@
     const getFirstLoadedBlock = () => currentBlockNum - document.getElementById('list').children.length
 
     const addBlockEntry = entry => {
+
         const previousBlock = getPreviousBlockEl(entry.raw.number)
         const newBlock = new DataHandler(BLOCK).createDataObject({number: entry.raw.number})
-        console.log('newBlock - ', newBlock)
+
         if (!previousBlock) {
             addStreamEntry(renderBlockEntry(newBlock))
         }
@@ -98,7 +97,8 @@
         const entryHTML = $.parseHTML(entryString)
         parent.prepend(entryHTML)
     }
-    const addStreamEntryAtId = (entry) => {
+    const addStreamEntryAtId = async entry => {
+
         // Get id of block, then check if it exists yet, append if ready
         const blockNum = entry.raw.blockNumber ? entry.raw.blockNumber : entry.raw.number
         if (!hasParentBlock(blockNum)) {
@@ -112,54 +112,34 @@
     }
 
     const eventQueue = []
-
     const subscriptions = {}
     const blocks = {}
     let currentBlockNum;
     let count = 0
 
-    /**
-     * Manages Websocket subscriptions.
-     */
-    const responseHandler = async (wsEvent) => {
-
-        const response = JSON.parse(wsEvent.data)
-
-        switch (response.id) {
-            case BLOCK: subscriptions[response.result] = {dataHandler: new DataHandler(BLOCK)}; break;
-            case UNCLE: subscriptions[response.result] = {dataHandler: new DataHandler(UNCLE)}; break;
-            case TXN: subscriptions[response.result] = {dataHandler: new DataHandler(TXN)}; break;
-            case INTERNAL_MSG: subscriptions[response.result] = {dataHandler: new DataHandler(INTERNAL_MSG)}; break;
-        }
-        if (response.params) {
+    const responseHandler = async (dataObject) => {
             setLoading(false)
-            const subscription = subscriptions[response.params.subscription]
-            const data = response.params.result
-
-            let dataObject = subscription.dataHandler.createDataObject(data)
-
-            if([BLOCK, UNCLE].indexOf(subscription.dataHandler.type) < 0) {
+            if([BLOCK, UNCLE].indexOf(dataObject.type) < 0) {
+                console.log(`responseHandler.indexOf -> `, dataObject.type )
                 if (dataObject.raw.blockNumber <  getFirstLoadedBlock()) return
-                addStreamEntryAtId(dataObject)
+                await addStreamEntryAtId(dataObject)
                 if(count % 20 === 0) {
                     eventQueue.push(dataObject)
                 }
             } else {
                 launchFrom({x: getRandomInt(window.innerWidth  / 3, window.innerWidth  / 2), colorText: dataObject.color, explosionSize: 110})
-
-                if (subscription.dataHandler.type === BLOCK) {
+                if (dataObject.type === BLOCK) {
                     currentBlockNum = dataObject.raw.number
 
                     if(!hasParentBlock(currentBlockNum)) {
-                        console.log(dataObject)
+
                         addBlockEntry(dataObject)
                     }
-                } else if (subscription.dataHandler.type === UNCLE) {
+                } else if (dataObject.type === UNCLE) {
                     addStreamEntry(renderBlockEntry(dataObject))
                 }
             }
             count++
-        }
     }
 
     class DataHandler {
@@ -174,7 +154,10 @@
                 detail: {
                     type: TYPE_LABELS[this.type],
                     name: TYPE_NAMES[this.type],
-                    value: this.getValue(data)
+                    value: this.getValue(data),
+                    ...(data.totalTxns && {totalTxns: data.totalTxns}),
+                    ...(data.totalTokens && {totalTokens: data.totalTokens}),
+                    totalEthTransferred: data.totalEthTransferred
                 },
                 link: this.getLink(data),
                 raw: data
@@ -207,7 +190,6 @@
                 case INTERNAL_MSG:
                 case TXN: return data.blockNumber
             }
-
         }
     }
 
